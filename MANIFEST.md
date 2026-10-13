@@ -20,7 +20,8 @@ https://github.com/nazmur96/podinfo-platform/tree/main/docs (private).
 - Protocol: HTTP/1.1 (h2c off). Also serves websockets (`/ws/echo`) and chunked responses. TLS terminates at the ALB
 - Fixed IP / mTLS to clients: no
 - Unauthenticated control endpoints to keep off the internet: `/env`, `/panic`,
-  `/fault_injection/*`, `/readyz/enable|disable`, `/store`, `/delay/{s}`, `/token`
+  `/fault_injection/*`, `/readyz/enable|disable`, `/store`, `/delay/{s}`, `/token`,
+  `/debug/pprof/` (Go profiler, always routed on 9898, `pkg/api/http/server.go:139`)
 
 ## 3. Compute
 - CPU/RAM: unknown. Measure in P3; do not trust the chart (`1m`/`16Mi`) or kustomize (`100m`/`64Mi` → `2000m`/`512Mi`)
