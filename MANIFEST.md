@@ -53,7 +53,7 @@ All flags can also be set as `PODINFO_<FLAG>` env vars (`-` → `_`; `main.go:90
 
 | Key | plain/secret | Source | Reloads without restart? |
 |---|---|---|---|
-| `jwt-secret` / `PODINFO_JWT_SECRET` | **secret** | Secrets Manager → ESO (P5). The binary has a **hardcoded default** (`main.go:85`) that must never be used | **No.** It is read once at startup (`main.go:165`). Rotation needs a pod restart (e.g. a rollout triggered on secret change) |
+| `jwt-secret` / `PODINFO_JWT_SECRET` | **secret** | Secrets Manager → ESO (P5). The binary has a **hardcoded default** (`main.go:85`) that must never be used. **Do not inject as an env var:** `GET /env` returns `os.Environ()` (`pkg/api/http/env.go`) and would leak it. Lean: mount as `config.yaml` under `--config-path` (read at startup, `main.go:93-100`). Decision in P5 | **No.** It is read once at startup (`main.go:165`). Rotation needs a pod restart (e.g. a rollout triggered on secret change) |
 | `cache-server` (only if Redis is used) | secret if it carries a password (`tcp://user:pass@host:port`) | ESO (P5) | No |
 | `port`, `port-metrics`, `level`, `data-path`, `ui-*`, fault flags | plain | flags / `PODINFO_*` env via gitops values | No (read once at startup) |
 | files under `--config-path` | plain or secret | ConfigMap / Secret volume | Watched (`pkg/fscache`), but only shown by `GET /configs`. The app uses none of these values |
