@@ -27,7 +27,7 @@ https://github.com/nazmur96/podinfo-platform/tree/main/docs (private).
 - CPU/RAM: unknown. Measure in P3; do not trust the chart (`1m`/`16Mi`) or kustomize (`100m`/`64Mi` → `2000m`/`512Mi`)
 - Stateless: yes for our CUJ. **But** `POST /store` is always routed and writes to `/data`
   (`--data-path`). We use emptyDir: lost on restart, different per replica, no PVC
-- Min/max replicas: start with 2; final numbers in P6 (prod floor ≥ 2)
+- Min/max replicas: HPA **min 3 / max 4** in dev, PDB `minAvailable: 2` (podinfo-platform `nfr.md`, template P6). Final numbers in P6
 - Scaling signal: CPU or HTTP RPS — confirm under load in P6
 
 ## 4. Data
