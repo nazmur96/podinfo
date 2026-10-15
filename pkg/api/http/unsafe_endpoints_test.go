@@ -58,3 +58,23 @@ func TestUnsafeEndpointsOnWhenEnabled(t *testing.T) {
 		t.Fatal("GET /env returned 404 with enable-unsafe-endpoints=true; route should be registered")
 	}
 }
+
+// The metrics port must not serve the profiler: net/http/pprof registers on
+// http.DefaultServeMux, which the metrics server used to serve (ADR-0008).
+func TestMetricsPortHasNoProfiler(t *testing.T) {
+	h := metricsHandler()
+
+	for path, want := range map[string]int{
+		"/metrics":             http.StatusOK,
+		"/healthz":             http.StatusOK,
+		"/debug/pprof/":        http.StatusNotFound,
+		"/debug/pprof/cmdline": http.StatusNotFound,
+		"/debug/pprof/heap":    http.StatusNotFound,
+	} {
+		rr := httptest.NewRecorder()
+		h.ServeHTTP(rr, httptest.NewRequest("GET", path, nil))
+		if rr.Code != want {
+			t.Errorf("metrics port GET %s returned %d, want %d", path, rr.Code, want)
+		}
+	}
+}

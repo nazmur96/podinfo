@@ -320,20 +320,26 @@ func (s *Server) startSecureServer() *http.Server {
 
 func (s *Server) startMetricsServer() {
 	if s.config.PortMetrics > 0 {
-		mux := http.DefaultServeMux
-		mux.Handle("/metrics", promhttp.Handler())
-		mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("OK"))
-		})
-
 		srv := &http.Server{
 			Addr:    fmt.Sprintf(":%v", s.config.PortMetrics),
-			Handler: mux,
+			Handler: metricsHandler(),
 		}
 
 		srv.ListenAndServe()
 	}
+}
+
+// metricsHandler uses its own mux, not http.DefaultServeMux: importing
+// net/http/pprof registers /debug/pprof/ on the default mux, so serving it
+// here would expose the profiler on the metrics port (ADR-0008).
+func metricsHandler() http.Handler {
+	mux := http.NewServeMux()
+	mux.Handle("/metrics", promhttp.Handler())
+	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("OK"))
+	})
+	return mux
 }
 
 func (s *Server) printRoutes() {

@@ -123,6 +123,11 @@ plain `go run`, and the full SHA from CI (`--build-arg REVISION`, CUJ step 1).
 `/env`, `/configs`, `/debug/pprof/`, `/panic`, `/delay/{n}`, `/chunked`,
 `/store`, `/fault_injection/*`, `/readyz/enable`, `/readyz/disable`.
 
+The same flag gates the gRPC `Env`, `Panic` and `Delay` services, and the
+metrics port (`--port-metrics`) never serves the Go profiler: it has its own
+router (upstream served `http.DefaultServeMux` there, where `net/http/pprof`
+registers `/debug/pprof/`).
+
 Turn on only for local experiments:
 
 ```bash

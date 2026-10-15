@@ -54,6 +54,8 @@ type Config struct {
 	Unready         bool   `mapstructure:"unready"`
 	JWTSecret       string `mapstructure:"jwt-secret"`
 	CacheServer     string `mapstructure:"cache-server"`
+
+	EnableUnsafeEndpoints bool `mapstructure:"enable-unsafe-endpoints"`
 }
 
 func NewServer(config *Config, logger *zap.Logger) (*Server, error) {
@@ -74,16 +76,7 @@ func (s *Server) ListenAndServe() *grpc.Server {
 	srv := grpc.NewServer()
 	server := health.NewServer()
 
-	// Register grpc apis for reflection
-	echo.RegisterEchoServiceServer(srv, &echoServer{config: s.config, logger: s.logger})
-	version.RegisterVersionServiceServer(srv, &VersionServer{config: s.config, logger: s.logger})
-	panic.RegisterPanicServiceServer(srv, &PanicServer{config: s.config, logger: s.logger})
-	delay.RegisterDelayServiceServer(srv, &DelayServer{config: s.config, logger: s.logger})
-	header.RegisterHeaderServiceServer(srv, &HeaderServer{config: s.config, logger: s.logger})
-	info.RegisterInfoServiceServer(srv, &infoServer{config: s.config})
-	status.RegisterStatusServiceServer(srv, &StatusServer{config: s.config, logger: s.logger})
-	token.RegisterTokenServiceServer(srv, &TokenServer{config: s.config, logger: s.logger})
-	env.RegisterEnvServiceServer(srv, &EnvServer{config: s.config, logger: s.logger})
+	s.registerServices(srv)
 
 	reflection.Register(srv)
 	grpc_health_v1.RegisterHealthServer(srv, server)
@@ -96,4 +89,21 @@ func (s *Server) ListenAndServe() *grpc.Server {
 	}()
 
 	return srv
+}
+
+func (s *Server) registerServices(srv *grpc.Server) {
+	// Register grpc apis for reflection
+	echo.RegisterEchoServiceServer(srv, &echoServer{config: s.config, logger: s.logger})
+	version.RegisterVersionServiceServer(srv, &VersionServer{config: s.config, logger: s.logger})
+	header.RegisterHeaderServiceServer(srv, &HeaderServer{config: s.config, logger: s.logger})
+	info.RegisterInfoServiceServer(srv, &infoServer{config: s.config})
+	status.RegisterStatusServiceServer(srv, &StatusServer{config: s.config, logger: s.logger})
+	token.RegisterTokenServiceServer(srv, &TokenServer{config: s.config, logger: s.logger})
+
+	// ADR-0006 / ADR-0008: the gRPC twins of the gated HTTP routes, same flag.
+	if s.config.EnableUnsafeEndpoints {
+		panic.RegisterPanicServiceServer(srv, &PanicServer{config: s.config, logger: s.logger})
+		delay.RegisterDelayServiceServer(srv, &DelayServer{config: s.config, logger: s.logger})
+		env.RegisterEnvServiceServer(srv, &EnvServer{config: s.config, logger: s.logger})
+	}
 }
