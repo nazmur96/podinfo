@@ -1,0 +1,33 @@
+# Commit-time safety net (P1-4). CI re-runs the same class of checks in P7;
+# `git commit --no-verify` only skips the local hooks.
+default_install_hook_types: [pre-commit, commit-msg]   # plain `pre-commit install` sets up both
+repos:
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.1
+    hooks:
+      - id: gitleaks-system   # the gitleaks pinned in mise.toml; no Go build, no network
+        pass_filenames: false   # upstream gitleaks-system omits this; `gitleaks git --staged` takes no file args
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+        args: [--allow-multiple-documents]
+      - id: check-json
+      - id: check-added-large-files
+      - id: detect-private-key
+      - id: no-commit-to-branch
+        args: [--branch, master]
+
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v4.4.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]
+
+  - repo: https://github.com/hadolint/hadolint
+    rev: v2.15.1
+    hooks:
+      - id: hadolint
