@@ -4,6 +4,10 @@
 
 [tools]
 go = "1.27.0" # matches go.mod language version
+uv = "0.13.1" # pipx: tools install through uv; never take from the host
+gitleaks = "8.30.1"
+hadolint = "2.15.1"
+"pipx:pre-commit" = "4.7.0"
 
 [env]
 # App itself does not need AWS. Kept empty on purpose so a leaked shell
