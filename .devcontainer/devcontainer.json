@@ -8,7 +8,7 @@
     "PATH": "${containerEnv:PATH}:/home/vscode/.local/bin:/home/vscode/.local/share/mise/shims"
   },
   "postStartCommand": "sudo update-alternatives --set iptables /usr/sbin/iptables-nft >/dev/null && sudo update-alternatives --set ip6tables /usr/sbin/ip6tables-nft >/dev/null && (pgrep -x dockerd >/dev/null || sudo /usr/local/share/docker-init.sh true)",
-  "postCreateCommand": "curl -fsSL https://mise.run | sh && ~/.local/bin/mise trust && ~/.local/bin/mise install && if [ -f .pre-commit-config.yaml ]; then ~/.local/bin/mise exec -- pre-commit install --hook-types pre-commit --hook-types commit-msg; fi",
+  "postCreateCommand": "curl -fsSL https://mise.run | sh && ~/.local/bin/mise trust && ~/.local/bin/mise install && if [ -f .pre-commit-config.yaml ]; then ~/.local/bin/mise exec -- pre-commit install; fi",
   "customizations": {
     "vscode": {
       "extensions": [

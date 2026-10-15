@@ -17,7 +17,7 @@ From P1-2: ticket branch → squash PR → delete branch (do not push straight t
 
 ```bash
 mise trust && mise install
-mise exec -- pre-commit install --hook-types pre-commit --hook-types commit-msg
+mise exec -- pre-commit install
 ```
 
 | Hook | What it stops |
