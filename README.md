@@ -82,6 +82,10 @@ To access the Swagger UI open `<podinfo-host>/swagger/index.html` in a browser.
 
 This fork is deployed by a learning platform project. Ownership contract (image tags, deploy gates, prod approval, rollback, manifest owner): [ownership.md](https://github.com/nazmur96/podinfo-platform/blob/main/docs/ownership.md) · service manifest: [MANIFEST.md](https://github.com/nazmur96/podinfo/blob/master/MANIFEST.md) · conventions: [conventions.md](https://github.com/nazmur96/podinfo-platform/blob/main/docs/conventions.md)
 
+### Dev toolchain
+
+Go **1.27.0** is owned by [`mise.toml`](mise.toml) in this repo (`mise install`). Do not install a project Go on the host. Do not add `devenv.nix` here.
+
 ### Guides
 
 * [Getting started with Timoni](https://timoni.sh/quickstart/)

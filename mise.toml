@@ -1,0 +1,10 @@
+# App toolchain. Go is owned by mise here (not the host, not a second copy in
+# the base image). P1-3 will add a devcontainer that runs `mise install`.
+# Never add devenv.nix alongside this file.
+
+[tools]
+go = "1.27.0" # matches go.mod language version
+
+[env]
+# App itself does not need AWS. Kept empty on purpose so a leaked shell
+# profile does not get a surprise cloud identity while hacking on Go.
