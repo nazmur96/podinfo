@@ -150,6 +150,21 @@ docker run --rm -p 9898:9898 podinfo:local
 docker inspect -f '{{.Config.User}}' podinfo:local   # 65532:65532
 ```
 
+### Hardening audit (P2-4)
+
+Against `podinfo:local` built from this tree:
+
+| Check | Result |
+|---|---|
+| Non-root | `docker inspect` → `65532:65532` |
+| Digests | Both `FROM` lines pin `@sha256:…`; no `latest` |
+| hadolint | Clean |
+| Trivy `HIGH,CRITICAL --ignore-unfixed` | Zero after bumping `golang.org/x/net` to **v0.60.0** (clears CVE-2026-78669) |
+| Listeners | Main `:9898`, metrics `:9797`, gRPC `:9999` — gated HTTP routes and `/debug/pprof/*` are **404** on 9898 and 9797; gRPC `Env`/`Panic`/`Delay` are absent from `grpcurl list` |
+| Read-only root | `--read-only`: `/healthz` and `/version` work with no writable mounts. `/store` (flag on) needs a writable `--data-path` (`tmpfs`/`emptyDir` on `/data`); without it the write fails. CUJ paths do not need `/tmp` |
+
+P6: `readOnlyRootFilesystem: true` plus an `emptyDir` on `/data` only if `/store` is ever enabled; no `/tmp` volume required for v1.
+
 ### Guides
 
 * [Getting started with Timoni](https://timoni.sh/quickstart/)
