@@ -163,7 +163,7 @@ Against `podinfo:local` built from this tree:
 | Dockle | No warnings. Two INFO notes, both deliberate: no `HEALTHCHECK` (no shell; Kubernetes probes do it), and content trust (cosign in P7) |
 | Trivy `HIGH,CRITICAL --ignore-unfixed` | Zero after bumping `golang.org/x/net` to **v0.60.0** (clears CVE-2026-78669) |
 | Listeners | Main `:9898`, metrics `:9797`, gRPC `:9999` — gated HTTP routes and `/debug/pprof/*` are **404** on 9898 and 9797; gRPC `Env`/`Panic`/`Delay` are absent from `grpcurl list` |
-| Read-only root | `--read-only`: `/healthz` and `/version` work with no writable mounts. `/store` (flag on) needs a writable `--data-path` (`tmpfs`/`emptyDir` on `/data`); without it the write fails. CUJ paths do not need `/tmp` |
+| Read-only root | `--read-only --cap-drop ALL --security-opt no-new-privileges`, no writable mounts: CUJ 1–6 and the web UI work. `/store` (flag on) needs a writable `/data` (the image passes `--data-path=/data`; `tmpfs`/`emptyDir` there); without it the write fails with 500. Nothing needs `/tmp` |
 
 P6: `readOnlyRootFilesystem: true` plus an `emptyDir` on `/data` only if `/store` is ever enabled; no `/tmp` volume required for v1.
 

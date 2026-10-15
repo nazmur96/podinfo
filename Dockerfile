@@ -37,4 +37,4 @@ USER 65532:65532
 EXPOSE 9898
 # Unsafe HTTP control routes stay off unless --enable-unsafe-endpoints (ADR-0006/0008).
 ENTRYPOINT ["/podinfo"]
-CMD ["--port=9898", "--ui-path=/home/nonroot/ui", "--data-path=/tmp/data"]
+CMD ["--port=9898", "--ui-path=/home/nonroot/ui", "--data-path=/data"]
