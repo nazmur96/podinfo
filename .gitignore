@@ -26,3 +26,6 @@ cue/go.sum
 
 .notation/podinfo.csr
 .notation/podinfo.key
+
+# P2-7 local secrets (scripts/make-local-secret.sh)
+.secrets/

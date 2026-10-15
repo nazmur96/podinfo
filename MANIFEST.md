@@ -10,7 +10,11 @@ https://github.com/nazmur96/podinfo-platform/tree/main/docs (private).
 - Artifact: **our** `Dockerfile` (P2-1): `golang:1.27-bookworm` →
   `gcr.io/distroless/static-debian12:nonroot`, `USER 65532:65532`, no `curl`/`netcat`/`podcli`.
   Upstream alpine+named-user image is replaced (template P2 worked-example rule)
-- Multi-arch: upstream builds amd64+arm64. Lean amd64-only for first CI — ADR pending
+- Multi-arch: upstream builds amd64+arm64. **amd64 only for v1** (P2-6: nodes are `t3.large`; revisit with Graviton)
+- Fork patches (keep them when syncing from upstream):
+  1. `--enable-unsafe-endpoints`, default off, gates the unsafe HTTP routes and the gRPC `Env`/`Panic`/`Delay` services (ADR-0006/0008)
+  2. The metrics port has its own mux, so it never serves `/debug/pprof/` from `http.DefaultServeMux` (P2-1a)
+  3. `ErrorResponse` sends its code as the HTTP status (`pkg/api/http/http.go`). Upstream always sent **200** with the code only in the JSON body, so clients, load balancers and Prometheus counted every 400/401/413/500 as a success (P2-8)
 
 ## 2. Network
 - Exposure: ClusterIP until P9, then public via ALB/Gateway
@@ -27,8 +31,8 @@ https://github.com/nazmur96/podinfo-platform/tree/main/docs (private).
 
 ## 3. Compute
 - CPU/RAM: unknown. Measure in P3; do not trust the chart (`1m`/`16Mi`) or kustomize (`100m`/`64Mi` → `2000m`/`512Mi`)
-- Stateless: yes for our CUJ. **But** `POST /store` is always routed and writes to `/data`
-  (`--data-path`). We use emptyDir: lost on restart, different per replica, no PVC
+- Stateless: yes for our CUJ. `POST /store` writes to `/data` (`--data-path`), but only with
+  `--enable-unsafe-endpoints` on. If it's ever on: emptyDir, lost on restart, different per replica, no PVC
 - Min/max replicas: HPA **min 3 / max 4** in dev, PDB `minAvailable: 2` (podinfo-platform `nfr.md`, template P6). Final numbers in P6
 - Scaling signal: CPU or HTTP RPS — confirm under load in P6
 

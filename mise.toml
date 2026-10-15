@@ -10,6 +10,8 @@ hadolint = "2.15.1"
 dive = "0.13.1" # P2-4 image layer audit
 dockle = "0.4.15" # P2-4 CIS-style image checks
 grpcurl = "1.9.4" # P2-4 gRPC listener probes
+jq = "1.8.2" # scripts/cuj.sh
+shellcheck = "0.11.0" # scripts/*.sh
 "pipx:pre-commit" = "4.7.0"
 
 [env]

@@ -15,6 +15,7 @@ timoni/
 **/*_test.go
 **/.DS_Store
 .env
+.secrets/
 .env.*
 *.tfstate
 *.tfstate.*
