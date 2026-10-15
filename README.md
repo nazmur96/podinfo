@@ -116,6 +116,40 @@ prefix `PODINFO_` (hyphens → underscores), e.g. `PODINFO_PORT=9898`,
 into `pkg/version.REVISION`: `git describe` with `make run`, `unknown` with a
 plain `go run`, and the full SHA from CI (`--build-arg REVISION`, CUJ step 1).
 
+### Fork patch: `--enable-unsafe-endpoints` (ADR-0006, ADR-0008)
+
+**Default off.** When off, these routes are not registered (HTTP 404):
+
+`/env`, `/configs`, `/debug/pprof/`, `/panic`, `/delay/{n}`, `/chunked`,
+`/store`, `/fault_injection/*`, `/readyz/enable`, `/readyz/disable`.
+
+The same flag gates the gRPC `Env`, `Panic` and `Delay` services, and the
+metrics port (`--port-metrics`) never serves the Go profiler: it has its own
+router (upstream served `http.DefaultServeMux` there, where `net/http/pprof`
+registers `/debug/pprof/`).
+
+Turn on only for local experiments:
+
+```bash
+mise exec -- go run ./cmd/podinfo --port=9898 --enable-unsafe-endpoints
+# or: PODINFO_ENABLE_UNSAFE_ENDPOINTS=true
+```
+
+Deployed environments must leave this flag off. Fault drills use startup
+flags (`--random-error`, etc.) via gitops, not runtime HTTP toggles.
+
+### Container image (P2-1)
+
+Our `Dockerfile` (not upstream's): multi-stage →
+`gcr.io/distroless/static-debian12:nonroot`, **numeric** `USER 65532`, no
+shell / `curl` / `netcat` / `podcli`. Listen on **9898**.
+
+```bash
+docker build -t podinfo:local --build-arg REVISION=$(git rev-parse HEAD) .
+docker run --rm -p 9898:9898 podinfo:local
+docker inspect -f '{{.Config.User}}' podinfo:local   # 65532:65532
+```
+
 ### Guides
 
 * [Getting started with Timoni](https://timoni.sh/quickstart/)

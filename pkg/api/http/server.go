@@ -72,6 +72,7 @@ type Config struct {
 	Unready               bool          `mapstructure:"unready"`
 	JWTSecret             string        `mapstructure:"jwt-secret"`
 	CacheServer           string        `mapstructure:"cache-server"`
+	EnableUnsafeEndpoints bool          `mapstructure:"enable-unsafe-endpoints"`
 }
 
 type Server struct {
@@ -136,7 +137,6 @@ func (s *Server) registerHandlers() {
 	rootPath := s.prefixedPath("/")
 
 	s.router.Handle(s.prefixedPath("/metrics"), promhttp.Handler())
-	s.router.PathPrefix(s.prefixedPath("/debug/pprof/")).Handler(http.DefaultServeMux)
 	s.router.HandleFunc(rootPath, s.indexHandler).HeadersRegexp("User-Agent", "^Mozilla.*").Methods("GET")
 	s.router.HandleFunc(rootPath, s.infoHandler).Methods("GET")
 	if rootPath != "/" {
@@ -146,32 +146,19 @@ func (s *Server) registerHandlers() {
 	s.router.HandleFunc(s.prefixedPath("/version"), s.versionHandler).Methods("GET")
 	s.router.HandleFunc(s.prefixedPath("/echo"), s.echoHandler)
 	s.router.PathPrefix(s.prefixedPath("/echo/")).HandlerFunc(s.echoHandler)
-	s.router.HandleFunc(s.prefixedPath("/env"), s.envHandler).Methods("GET", "POST")
 	s.router.HandleFunc(s.prefixedPath("/headers"), s.echoHeadersHandler).Methods("GET", "POST")
-	s.router.HandleFunc(s.prefixedPath("/delay/{wait:[0-9]+}"), s.delayHandler).Methods("GET").Name("delay")
 	s.router.HandleFunc(s.prefixedPath("/healthz"), s.healthzHandler).Methods("GET")
 	s.router.HandleFunc(s.prefixedPath("/readyz"), s.readyzHandler).Methods("GET")
-	s.router.HandleFunc(s.prefixedPath("/readyz/enable"), s.enableReadyHandler).Methods("POST")
-	s.router.HandleFunc(s.prefixedPath("/readyz/disable"), s.disableReadyHandler).Methods("POST")
-	s.router.HandleFunc(s.prefixedPath("/fault_injection/enable"), s.enableFaultInjectionHandler).Methods("POST")
-	s.router.HandleFunc(s.prefixedPath("/fault_injection/disable"), s.disableFaultInjectionHandler).Methods("POST")
-	s.router.HandleFunc(s.prefixedPath("/fault_injection/status"), s.faultInjectionStatusHandler).Methods("GET")
-	s.router.HandleFunc(s.prefixedPath("/panic"), s.panicHandler).Methods("GET")
 	s.router.HandleFunc(s.prefixedPath("/status/{code:[0-9]+}"), s.statusHandler).Methods("GET", "POST", "PUT").Name("status")
-	s.router.HandleFunc(s.prefixedPath("/store"), s.storeWriteHandler).Methods("POST", "PUT")
-	s.router.HandleFunc(s.prefixedPath("/store/{hash}"), s.storeReadHandler).Methods("GET").Name("store")
 	s.router.HandleFunc(s.prefixedPath("/cache/{key}"), s.cacheWriteHandler).Methods("POST", "PUT")
 	s.router.HandleFunc(s.prefixedPath("/cache/{key}"), s.cacheDeleteHandler).Methods("DELETE")
 	s.router.HandleFunc(s.prefixedPath("/cache/{key}"), s.cacheReadHandler).Methods("GET").Name("cache")
-	s.router.HandleFunc(s.prefixedPath("/configs"), s.configReadHandler).Methods("GET")
 	s.router.HandleFunc(s.prefixedPath("/token"), s.tokenGenerateHandler).Methods("POST")
 	s.router.HandleFunc(s.prefixedPath("/token/validate"), s.tokenValidateHandler).Methods("GET")
 	s.router.HandleFunc(s.prefixedPath("/api/info"), s.infoHandler).Methods("GET")
 	s.router.HandleFunc(s.prefixedPath("/api/echo"), s.echoHandler)
 	s.router.PathPrefix(s.prefixedPath("/api/echo/")).HandlerFunc(s.echoHandler)
 	s.router.HandleFunc(s.prefixedPath("/ws/echo"), s.echoWsHandler)
-	s.router.HandleFunc(s.prefixedPath("/chunked"), s.chunkedHandler)
-	s.router.HandleFunc(s.prefixedPath("/chunked/{wait:[0-9]+}"), s.chunkedHandler)
 	s.router.PathPrefix(s.prefixedPath("/swagger/")).Handler(httpSwagger.Handler(
 		httpSwagger.URL(s.prefixedPath("/swagger/doc.json")),
 	))
@@ -182,6 +169,25 @@ func (s *Server) registerHandlers() {
 		}
 		w.Write([]byte(doc))
 	})
+
+	// ADR-0006 / ADR-0008: diagnostic + control routes off by default.
+	// Off in every deployed env; on only for local experiments.
+	if s.config.EnableUnsafeEndpoints {
+		s.router.PathPrefix(s.prefixedPath("/debug/pprof/")).Handler(http.DefaultServeMux)
+		s.router.HandleFunc(s.prefixedPath("/env"), s.envHandler).Methods("GET", "POST")
+		s.router.HandleFunc(s.prefixedPath("/configs"), s.configReadHandler).Methods("GET")
+		s.router.HandleFunc(s.prefixedPath("/delay/{wait:[0-9]+}"), s.delayHandler).Methods("GET").Name("delay")
+		s.router.HandleFunc(s.prefixedPath("/readyz/enable"), s.enableReadyHandler).Methods("POST")
+		s.router.HandleFunc(s.prefixedPath("/readyz/disable"), s.disableReadyHandler).Methods("POST")
+		s.router.HandleFunc(s.prefixedPath("/fault_injection/enable"), s.enableFaultInjectionHandler).Methods("POST")
+		s.router.HandleFunc(s.prefixedPath("/fault_injection/disable"), s.disableFaultInjectionHandler).Methods("POST")
+		s.router.HandleFunc(s.prefixedPath("/fault_injection/status"), s.faultInjectionStatusHandler).Methods("GET")
+		s.router.HandleFunc(s.prefixedPath("/panic"), s.panicHandler).Methods("GET")
+		s.router.HandleFunc(s.prefixedPath("/store"), s.storeWriteHandler).Methods("POST", "PUT")
+		s.router.HandleFunc(s.prefixedPath("/store/{hash}"), s.storeReadHandler).Methods("GET").Name("store")
+		s.router.HandleFunc(s.prefixedPath("/chunked"), s.chunkedHandler)
+		s.router.HandleFunc(s.prefixedPath("/chunked/{wait:[0-9]+}"), s.chunkedHandler)
+	}
 }
 
 func (s *Server) registerMiddlewares() {
@@ -314,20 +320,26 @@ func (s *Server) startSecureServer() *http.Server {
 
 func (s *Server) startMetricsServer() {
 	if s.config.PortMetrics > 0 {
-		mux := http.DefaultServeMux
-		mux.Handle("/metrics", promhttp.Handler())
-		mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("OK"))
-		})
-
 		srv := &http.Server{
 			Addr:    fmt.Sprintf(":%v", s.config.PortMetrics),
-			Handler: mux,
+			Handler: metricsHandler(),
 		}
 
 		srv.ListenAndServe()
 	}
+}
+
+// metricsHandler uses its own mux, not http.DefaultServeMux: importing
+// net/http/pprof registers /debug/pprof/ on the default mux, so serving it
+// here would expose the profiler on the metrics port (ADR-0008).
+func metricsHandler() http.Handler {
+	mux := http.NewServeMux()
+	mux.Handle("/metrics", promhttp.Handler())
+	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("OK"))
+	})
+	return mux
 }
 
 func (s *Server) printRoutes() {

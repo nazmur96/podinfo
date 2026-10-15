@@ -7,8 +7,9 @@ https://github.com/nazmur96/podinfo-platform/tree/main/docs (private).
 
 ## 1. Identity
 - Runtime: Go 1.27 (`go.mod`), static binary (`CGO_ENABLED=0`)
-- Artifact: upstream `Dockerfile` (`golang:1.27-alpine` → `alpine:3.24`). We replace/harden it in P2:
-  it runs as non-numeric `USER app` (fails `runAsNonRoot`) and ships `curl` + `netcat`
+- Artifact: **our** `Dockerfile` (P2-1): `golang:1.27-bookworm` →
+  `gcr.io/distroless/static-debian12:nonroot`, `USER 65532:65532`, no `curl`/`netcat`/`podcli`.
+  Upstream alpine+named-user image is replaced (template P2 worked-example rule)
 - Multi-arch: upstream builds amd64+arm64. Lean amd64-only for first CI — ADR pending
 
 ## 2. Network
@@ -19,9 +20,10 @@ https://github.com/nazmur96/podinfo-platform/tree/main/docs (private).
 - Not exposing for v1: gRPC 9999, HTTPS-in-pod 9899 (both off by default in the binary)
 - Protocol: HTTP/1.1 (h2c off). Also serves websockets (`/ws/echo`) and chunked responses. TLS terminates at the ALB
 - Fixed IP / mTLS to clients: no
-- Unauthenticated control endpoints to keep off the internet: `/env`, `/panic`,
-  `/fault_injection/*`, `/readyz/enable|disable`, `/store`, `/delay/{s}`, `/token`,
-  `/debug/pprof/` (Go profiler, always routed on 9898, `pkg/api/http/server.go:139`)
+- Unsafe routes gated by `--enable-unsafe-endpoints` (default **off**, ADR-0006/0008):
+  `/env`, `/configs`, `/debug/pprof/`, `/panic`, `/delay`, `/chunked`, `/store`,
+  `/fault_injection/*`, `/readyz/enable|disable`. `/token` stays on (CUJ); edge
+  allow-list in P9 still restricts it publicly
 
 ## 3. Compute
 - CPU/RAM: unknown. Measure in P3; do not trust the chart (`1m`/`16Mi`) or kustomize (`100m`/`64Mi` → `2000m`/`512Mi`)
@@ -53,7 +55,7 @@ All flags can also be set as `PODINFO_<FLAG>` env vars (`-` → `_`; `main.go:90
 
 | Key | plain/secret | Source | Reloads without restart? |
 |---|---|---|---|
-| `jwt-secret` / `PODINFO_JWT_SECRET` | **secret** | Secrets Manager → ESO (P5). The binary has a **hardcoded default** (`main.go:85`) that must never be used. **Both injection paths are HTTP-readable in upstream code:** env var → `GET /env` (`os.Environ()`, `pkg/api/http/env.go`); `config.yaml` in `--config-path` → `GET /configs` (returns every file's contents, `pkg/fscache/fscache.go`). Decision (podinfo-platform ADR-0006): our build disables `/env`, `/configs`, `/debug/pprof/` by default (P2 patch), then the secret is mounted as `config.yaml` | **No.** It is read once at startup (`main.go:165`). Rotation needs a pod restart (e.g. a rollout triggered on secret change) |
+| `jwt-secret` / `PODINFO_JWT_SECRET` | **secret** | Secrets Manager → ESO (P5). The binary has a **hardcoded default** (`main.go:85`) that must never be used. Upstream leaked both env and `config.yaml` via `/env` and `/configs`. **Our fork** gates those routes behind `--enable-unsafe-endpoints` (default off); then the secret is mounted as `config.yaml` (ADR-0006) | **No.** Read once at startup. Rotation needs a pod restart |
 | `cache-server` (only if Redis is used) | secret if it carries a password (`tcp://user:pass@host:port`) | ESO (P5) | No |
 | `port`, `port-metrics`, `level`, `data-path`, `ui-*`, fault flags | plain | flags / `PODINFO_*` env via gitops values | No (read once at startup) |
 | files under `--config-path` | plain or secret | ConfigMap / Secret volume | Watched (`pkg/fscache`), but only shown by `GET /configs`. The app uses none of these values |

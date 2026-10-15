@@ -61,6 +61,7 @@ func main() {
 	fs.Int("stress-memory", 0, "MB of data to load into memory")
 	fs.String("cache-server", "", "Redis address in the format 'tcp://<host>:<port>'")
 	fs.String("otel-service-name", "", "service name for OpenTelemetry, when not set tracing and log export are disabled")
+	fs.Bool("enable-unsafe-endpoints", false, "register diagnostic/control HTTP routes (/env, /configs, /debug/pprof/, /panic, /delay, /chunked, /store, /fault_injection/*, /readyz/enable|disable). Off by default (ADR-0006, ADR-0008)")
 
 	versionFlag := fs.BoolP("version", "v", false, "get version number")
 
