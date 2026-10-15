@@ -43,7 +43,7 @@ https://github.com/nazmur96/podinfo-platform/tree/main/docs (private).
 - Health: `GET /healthz` (liveness), `GET /readyz` (readiness)
 - Gap: both are in-memory flags. They go false only on shutdown, on `--unhealthy`/`--unready`,
   or after `POST /readyz/disable`. They check no dependency. For v1 (no deps) process-only readiness is acceptable
-- Logs: stdout, structured JSON (zap)
+- Logs: **stderr** (not stdout), structured JSON (zap), sampled after 100 identical messages/s (`cmd/podinfo/main.go:239-246`)
 - Metrics: Prometheus `/metrics` (port 9898 always, 9797 if enabled)
 - Traced: OTel traces and logs export only when `--otel-service-name` is set
   (OTLP gRPC, endpoint from `OTEL_EXPORTER_OTLP_ENDPOINT`). Decide in P10
