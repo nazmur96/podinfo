@@ -94,20 +94,27 @@ devpod up . --provider docker
 # or: mise trust && mise install
 ```
 
-### Run locally (no container)
+### Run locally (no image)
 
-Upstream's README jumps to Docker/Helm. For day-to-day Go work from this
-repo root (needs `mise install` first):
+Upstream's README jumps to Docker/Helm, but its `Makefile` has the
+developers' path. Run it inside the dev container (`make` isn't on the host):
+
+```bash
+make run          # :9898, gRPC :9999, --level=debug, commit stamped via git describe
+```
+
+`make run` also sets two `--backend-url`s at `httpbin.org`, so `POST /echo`
+calls the internet. For a bare start with defaults:
 
 ```bash
 mise exec -- go run ./cmd/podinfo --port=9898
-# or: mise exec -- go build -o bin/podinfo ./cmd/podinfo && ./bin/podinfo --port=9898
 ```
 
 Then `curl -sS http://127.0.0.1:9898/healthz`. Flags are also env vars with
 prefix `PODINFO_` (hyphens → underscores), e.g. `PODINFO_PORT=9898`,
-`PODINFO_JWT_SECRET=…`. Without `-ldflags`, `/version` reports
-`"commit":"unknown"` — expected locally; CI stamps the SHA (CUJ step 1).
+`PODINFO_JWT_SECRET=…`. `/version`'s `commit` is whatever the build stamps
+into `pkg/version.REVISION`: `git describe` with `make run`, `unknown` with a
+plain `go run`, and the full SHA from CI (`--build-arg REVISION`, CUJ step 1).
 
 ### Guides
 
