@@ -84,7 +84,15 @@ This fork is deployed by a learning platform project. Ownership contract (image 
 
 ### Dev toolchain
 
-Go **1.27.0** is owned by [`mise.toml`](mise.toml) in this repo (`mise install`). Do not install a project Go on the host. Do not add `devenv.nix` here.
+Go **1.27.0** is owned by [`mise.toml`](mise.toml) in this repo. Do not install a project Go on the host. Do not add `devenv.nix` here.
+
+**Userland** + docker-in-docker (for image builds in P2): [`.devcontainer/`](.devcontainer/).
+**gopls** runs in the container (editor server), not on the host.
+
+```bash
+devpod up . --provider docker
+# or: mise trust && mise install
+```
 
 ### Guides
 
