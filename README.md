@@ -17,7 +17,7 @@ Specifications:
 * Graceful shutdown on interrupt signals
 * File watcher for secrets and configmaps
 * Instrumented with Prometheus and Open Telemetry
-* Structured logging with zap 
+* Structured logging with zap
 * 12-factor app with viper
 * Fault injection (random errors and latency)
 * Swagger docs
@@ -31,7 +31,7 @@ Specifications:
 Web API:
 
 * `GET /` prints runtime information
-* `GET /version` prints podinfo version and git commit hash 
+* `GET /version` prints podinfo version and git commit hash
 * `GET /metrics` return HTTP requests duration and Go runtime metrics
 * `GET /healthz` used by Kubernetes liveness probe
 * `GET /readyz` used by Kubernetes readiness probe
@@ -42,7 +42,7 @@ Web API:
 * `GET /fault_injection/status` returns the current fault injection state (`enabled` or `disabled`)
 * `GET /status/{code}` returns the status code
 * `GET /panic` crashes the process with exit code 255
-* `POST /echo` forwards the call to the backend service and echos the posted content 
+* `POST /echo` forwards the call to the backend service and echos the posted content
 * `GET /env` returns the environment variables as a JSON array
 * `GET /headers` returns a JSON with the request HTTP headers
 * `GET /delay/{seconds}` waits for the specified period
@@ -93,6 +93,28 @@ Go **1.27.0** is owned by [`mise.toml`](mise.toml) in this repo. Do not install 
 devpod up . --provider docker
 # or: mise trust && mise install
 ```
+
+### Run locally (no image)
+
+Upstream's README jumps to Docker/Helm, but its `Makefile` has the
+developers' path. Run it inside the dev container (`make` isn't on the host):
+
+```bash
+make run          # :9898, gRPC :9999, --level=debug, commit stamped via git describe
+```
+
+`make run` also sets two `--backend-url`s at `httpbin.org`, so `POST /echo`
+calls the internet. For a bare start with defaults:
+
+```bash
+mise exec -- go run ./cmd/podinfo --port=9898
+```
+
+Then `curl -sS http://127.0.0.1:9898/healthz`. Flags are also env vars with
+prefix `PODINFO_` (hyphens → underscores), e.g. `PODINFO_PORT=9898`,
+`PODINFO_JWT_SECRET=…`. `/version`'s `commit` is whatever the build stamps
+into `pkg/version.REVISION`: `git describe` with `make run`, `unknown` with a
+plain `go run`, and the full SHA from CI (`--build-arg REVISION`, CUJ step 1).
 
 ### Guides
 
