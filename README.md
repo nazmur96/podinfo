@@ -150,6 +150,23 @@ docker run --rm -p 9898:9898 podinfo:local
 docker inspect -f '{{.Config.User}}' podinfo:local   # 65532:65532
 ```
 
+### Hardening audit (P2-4)
+
+Against `podinfo:local` built from this tree:
+
+| Check | Result |
+|---|---|
+| Non-root | `docker inspect` → `65532:65532` |
+| Digests | Both `FROM` lines pin `@sha256:…`; no `latest` |
+| hadolint | Clean |
+| dive | **99.999%** efficiency; layers hold only the distroless base, the binary and `ui/`. No `.git`, sources, tests or keys |
+| Dockle | No warnings. Two INFO notes, both deliberate: no `HEALTHCHECK` (no shell; Kubernetes probes do it), and content trust (cosign in P7) |
+| Trivy `HIGH,CRITICAL --ignore-unfixed` | Zero after bumping `golang.org/x/net` to **v0.60.0** (clears CVE-2026-78669) |
+| Listeners | Main `:9898`, metrics `:9797`, gRPC `:9999` — gated HTTP routes and `/debug/pprof/*` are **404** on 9898 and 9797; gRPC `Env`/`Panic`/`Delay` are absent from `grpcurl list` |
+| Read-only root | `--read-only --cap-drop ALL --security-opt no-new-privileges`, no writable mounts: CUJ 1–6 and the web UI work. `/store` (flag on) needs a writable `/data` (the image passes `--data-path=/data`; `tmpfs`/`emptyDir` there); without it the write fails with 500. Nothing needs `/tmp` |
+
+P6: `readOnlyRootFilesystem: true` plus an `emptyDir` on `/data` only if `/store` is ever enabled; no `/tmp` volume required for v1.
+
 ### Guides
 
 * [Getting started with Timoni](https://timoni.sh/quickstart/)

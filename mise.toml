@@ -7,6 +7,9 @@ go = "1.27.0" # matches go.mod language version
 uv = "0.13.1" # pipx: tools install through uv; never take from the host
 gitleaks = "8.30.1"
 hadolint = "2.15.1"
+dive = "0.13.1" # P2-4 image layer audit
+dockle = "0.4.15" # P2-4 CIS-style image checks
+grpcurl = "1.9.4" # P2-4 gRPC listener probes
 "pipx:pre-commit" = "4.7.0"
 
 [env]
