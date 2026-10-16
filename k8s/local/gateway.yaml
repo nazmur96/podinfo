@@ -1,0 +1,42 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: public
+  namespace: gateway
+  labels:
+    app.kubernetes.io/name: gateway
+    app.kubernetes.io/instance: podinfo-local
+    app.kubernetes.io/component: gateway
+    app.kubernetes.io/part-of: podinfo
+    app.kubernetes.io/managed-by: kubectl
+    team: nazmur96
+  annotations:
+    cert-manager.io/cluster-issuer: local-ca
+spec:
+  gatewayClassName: eg
+  infrastructure:
+    parametersRef:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: nodeport
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: Same
+    - name: https
+      protocol: HTTPS
+      port: 443
+      hostname: podinfo.localhost
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - name: podinfo-localhost-tls
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              gateway-access: public

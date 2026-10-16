@@ -1,0 +1,6 @@
+# Pinned values for cert-manager (see scripts/install-local-platform.sh).
+# Gateway API support so the Gateway annotation can request certificates.
+crds:
+  enabled: true
+config:
+  enableGatewayAPI: true

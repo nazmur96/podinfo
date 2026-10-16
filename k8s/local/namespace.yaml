@@ -1,0 +1,50 @@
+# Platform namespaces for the local cluster, created here (not by helm's
+# --create-namespace) so each has PSA restricted and our labels. Checked in the
+# P3-6 review: a server dry-run of enforce=restricted warned about no pod in any
+# of them, so nothing here needs an exception. The Envoy data-plane pods run in
+# envoy-gateway-system; `gateway` only holds the Gateway, EnvoyProxy and the
+# redirect route.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: gateway
+  labels:
+    app.kubernetes.io/name: gateway
+    app.kubernetes.io/instance: podinfo-local
+    app.kubernetes.io/component: gateway
+    app.kubernetes.io/part-of: podinfo
+    app.kubernetes.io/managed-by: kubectl
+    team: nazmur96
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/audit: restricted
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: envoy-gateway-system
+  labels:
+    app.kubernetes.io/name: envoy-gateway
+    app.kubernetes.io/instance: podinfo-local
+    app.kubernetes.io/component: gateway
+    app.kubernetes.io/part-of: podinfo
+    app.kubernetes.io/managed-by: kubectl
+    team: nazmur96
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/audit: restricted
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cert-manager
+  labels:
+    app.kubernetes.io/name: cert-manager
+    app.kubernetes.io/instance: podinfo-local
+    app.kubernetes.io/component: tls
+    app.kubernetes.io/part-of: podinfo
+    app.kubernetes.io/managed-by: kubectl
+    team: nazmur96
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/audit: restricted
