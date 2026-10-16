@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# P3-1: create the kind cluster and the podinfo-dev namespace.
+# P3-1: create the kind cluster. The podinfo-dev namespace is owned by
+# k8s/base/namespace.yaml and is applied on the first scripts/deploy.sh
+# (P3-2) — kind/ no longer ships a namespace copy.
 # Tools from mise.toml (kind, kubectl). Runs against the host's Docker (ADR-0011).
 # Usage: mise exec -- scripts/cluster-up.sh
 set -euo pipefail
@@ -23,12 +25,8 @@ fi
 echo "creating kind cluster podinfo (kubeconfig=$KUBECONFIG)"
 kind create cluster --config kind/cluster.yaml --kubeconfig "$KUBECONFIG"
 
-# Wait until all six nodes are Ready.
 echo "waiting for nodes"
 kubectl wait --for=condition=Ready node --all --timeout=180s
-
-echo "applying kind/namespace.yaml"
-kubectl apply -f kind/namespace.yaml
 
 context=$(kubectl config current-context)
 if [ "$context" != kind-podinfo ]; then
@@ -46,6 +44,5 @@ fi
 
 echo "nodes:"
 kubectl get nodes -o wide
-echo "namespace:"
-kubectl get ns podinfo-dev --show-labels
 echo "OK: cluster up (context=$context, KUBECONFIG=$KUBECONFIG)"
+echo "Next: scripts/make-local-secret.sh && scripts/deploy.sh  # creates ns podinfo-dev"

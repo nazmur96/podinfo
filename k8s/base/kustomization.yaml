@@ -1,0 +1,10 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: podinfo-dev
+resources:
+  - namespace.yaml
+  - serviceaccount.yaml
+  - deployment.yaml
+  - service.yaml
+# Labels are written on each object. Do not use commonLabels / labels with
+# includeSelectors: selectors must stay name+instance only (immutable).

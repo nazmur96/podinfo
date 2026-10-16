@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: podinfo
+  namespace: podinfo-dev
+  labels:
+    app.kubernetes.io/name: podinfo
+    app.kubernetes.io/instance: podinfo-dev
+    app.kubernetes.io/component: api
+    app.kubernetes.io/part-of: podinfo
+    app.kubernetes.io/managed-by: kubectl
+    team: nazmur96
+spec:
+  type: ClusterIP
+  selector:
+    # Immutable: name + instance only (phase-3-plan P3-2).
+    app.kubernetes.io/name: podinfo
+    app.kubernetes.io/instance: podinfo-dev
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP
