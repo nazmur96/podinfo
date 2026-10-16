@@ -32,3 +32,6 @@ cue/go.sum
 
 # P3-1: per-repo kubeconfig (mise KUBECONFIG); never commit cluster credentials
 .kube/
+
+# P3-6: local CA exported by scripts/install-local-platform.sh (CURL_CA_BUNDLE)
+.certs/

@@ -18,3 +18,5 @@ metadata:
     pod-security.kubernetes.io/warn-version: latest
     pod-security.kubernetes.io/audit: restricted
     pod-security.kubernetes.io/audit-version: latest
+    # P3-6: Gateway https listener allows routes only from namespaces with this label.
+    gateway-access: public

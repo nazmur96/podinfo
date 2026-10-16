@@ -1,0 +1,54 @@
+# Local CA for kind (D7). Trust per command via CURL_CA_BUNDLE=.certs/ca.crt
+# (scripts/install-local-platform.sh exports it). Not the system trust store.
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: selfsigned
+  labels:
+    app.kubernetes.io/name: cert-manager
+    app.kubernetes.io/instance: podinfo-local
+    app.kubernetes.io/component: tls
+    app.kubernetes.io/part-of: podinfo
+    app.kubernetes.io/managed-by: kubectl
+    team: nazmur96
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: local-ca
+  namespace: cert-manager
+  labels:
+    app.kubernetes.io/name: cert-manager
+    app.kubernetes.io/instance: podinfo-local
+    app.kubernetes.io/component: tls
+    app.kubernetes.io/part-of: podinfo
+    app.kubernetes.io/managed-by: kubectl
+    team: nazmur96
+spec:
+  isCA: true
+  commonName: podinfo-local-ca
+  secretName: local-ca-secret
+  duration: 87600h # 10y
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: selfsigned
+    kind: ClusterIssuer
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: local-ca
+  labels:
+    app.kubernetes.io/name: cert-manager
+    app.kubernetes.io/instance: podinfo-local
+    app.kubernetes.io/component: tls
+    app.kubernetes.io/part-of: podinfo
+    app.kubernetes.io/managed-by: kubectl
+    team: nazmur96
+spec:
+  ca:
+    secretName: local-ca-secret
