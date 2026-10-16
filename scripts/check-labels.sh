@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # P3-2: every object *we* own in podinfo-dev must carry the six standard
-# labels + team (conventions.md). Skips the namespace's auto-created
-# ServiceAccount/default and ConfigMap/kube-root-ca.crt.
+# labels + team (conventions.md). "We own" = whatever k8s/overlays/dev
+# renders, plus the Secret scripts/deploy.sh creates, so a new manifest is
+# checked without editing this script. Auto-created objects (the default
+# ServiceAccount, kube-root-ca.crt) aren't rendered, so they're never checked.
 # Usage: mise exec -- scripts/check-labels.sh
 set -euo pipefail
 
@@ -18,14 +20,15 @@ required=(
 	team
 )
 
-# kind/name pairs we own. Extend when P3-6 adds HTTPRoutes etc.
-objects=(
-	"Namespace/${NS}"
-	"Deployment/podinfo"
-	"Service/podinfo"
-	"ServiceAccount/podinfo"
-	"Secret/podinfo-config"
+mapfile -t objects < <(
+	kubectl apply -k k8s/overlays/dev --dry-run=client -o json |
+		jq -r '(.items // [.])[] | "\(.kind)/\(.metadata.name)"'
 )
+objects+=("Secret/podinfo-config") # created by scripts/deploy.sh, not kustomize
+if [ "${#objects[@]}" -lt 2 ]; then
+	echo "FAIL could not render k8s/overlays/dev" >&2
+	exit 1
+fi
 
 failed=0
 for obj in "${objects[@]}"; do
