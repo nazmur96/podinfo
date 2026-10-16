@@ -205,13 +205,20 @@ Runs on the **host's Docker** with tools from this repo's `mise.toml`
 
 ```bash
 mise install
-mise exec -- scripts/cluster-up.sh     # 3 control planes + 3 workers, ns podinfo-dev (PSA restricted)
-mise exec -- kubectl get nodes
+mise exec -- scripts/cluster-up.sh          # 3 control planes + 3 workers (no app yet)
+scripts/make-local-secret.sh                # once: .secrets/config.yaml
+mise exec -- scripts/deploy.sh              # build → kind load → Secret → apply k8s/overlays/dev
+EXPECT_SHA=$(git rev-parse HEAD) \
+  bash -c 'mise exec -- kubectl -n podinfo-dev port-forward svc/podinfo 9898:80 &
+           sleep 2; EXPECT_SHA=$(git rev-parse HEAD) mise exec -- scripts/cuj.sh; kill %1'
+mise exec -- scripts/check-labels.sh
 mise exec -- scripts/cluster-down.sh
 ```
 
-Host ports 80/443 map to NodePorts 30080/30443 on the first control-plane
-node (Gateway wires those in P3-6). Do not `devpod up` from a git worktree.
+Namespace `podinfo-dev` (PSA restricted) is owned by `k8s/base/namespace.yaml`
+and created on deploy — not by `kind/`. Host ports 80/443 map to NodePorts
+30080/30443 for the P3-6 Gateway. Do not `devpod up` from a git worktree.
+Do not add an IPv6 `listenAddress` on those mappings (see `kind/cluster.yaml`).
 
 ### Guides
 

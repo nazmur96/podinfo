@@ -1,0 +1,20 @@
+# Sole owner of the podinfo-dev namespace (P3-2). Applied by
+# scripts/deploy.sh via kustomize. kind/ no longer ships a copy — cluster-up
+# creates the cluster only; the first deploy creates the namespace.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: podinfo-dev
+  labels:
+    app.kubernetes.io/name: podinfo
+    app.kubernetes.io/instance: podinfo-dev
+    app.kubernetes.io/component: namespace
+    app.kubernetes.io/part-of: podinfo
+    app.kubernetes.io/managed-by: kubectl
+    team: nazmur96
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: latest
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/warn-version: latest
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/audit-version: latest
