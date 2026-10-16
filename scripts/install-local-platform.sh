@@ -18,14 +18,13 @@ if ! kind get clusters 2>/dev/null | grep -qx podinfo; then
 	exit 1
 fi
 
-echo "applying gateway namespace"
+echo "applying platform namespaces (PSA restricted, labelled; helm doesn't create them)"
 kubectl apply -f k8s/local/namespace.yaml
 
 echo "installing Envoy Gateway ${EG_VERSION} (includes Gateway API standard CRDs)"
 helm upgrade --install eg "$EG_CHART" \
 	--version "$EG_VERSION" \
 	--namespace envoy-gateway-system \
-	--create-namespace \
 	--wait \
 	--timeout 5m
 
@@ -37,7 +36,6 @@ echo "installing cert-manager ${CM_VERSION} (Gateway API support on)"
 helm upgrade --install cert-manager "$CM_CHART" \
 	--version "$CM_VERSION" \
 	--namespace cert-manager \
-	--create-namespace \
 	--values k8s/local/cert-manager-values.yaml \
 	--wait \
 	--timeout 5m
@@ -72,18 +70,16 @@ kubectl apply -f k8s/local/envoyproxy-nodeport.yaml
 kubectl apply -f k8s/local/gatewayclass.yaml
 kubectl apply -f k8s/local/gateway.yaml
 
-echo "applying HTTPRoutes (Exact allow-list + HTTP→HTTPS redirect)"
+echo "applying the HTTP→HTTPS redirect route"
+# podinfo's own route lives with the app (k8s/overlays/dev/httproute.yaml) and
+# is applied by scripts/deploy.sh, after this script. Order: cluster-up →
+# install-local-platform → deploy. The gateway-access label on podinfo-dev is
+# owned by k8s/base/namespace.yaml.
 kubectl apply -f k8s/local/httproute-redirect.yaml
-kubectl apply -f k8s/local/httproute-podinfo.yaml
-
-# Ensure podinfo-dev carries the Gateway allow label (also in k8s/base/namespace.yaml).
-if kubectl get ns podinfo-dev >/dev/null 2>&1; then
-	kubectl label ns podinfo-dev gateway-access=public --overwrite
-fi
 
 echo "waiting for Gateway public to be programmed"
 # Gateway status can take a moment after EnvoyProxy Service gets NodePorts.
-for i in $(seq 1 60); do
+for _ in $(seq 1 60); do
 	if kubectl -n gateway get gateway public \
 		-o jsonpath='{.status.conditions[?(@.type=="Programmed")].status}' 2>/dev/null | grep -qx True; then
 		break
@@ -128,5 +124,5 @@ cat <<EOF
 OK: local platform installed
   CA:   $ROOT/.certs/ca.crt
   CUJ:  CURL_CA_BUNDLE=$ROOT/.certs/ca.crt BASE=https://podinfo.localhost EXPECT_SHA=\$(git rev-parse HEAD) scripts/cuj.sh
-  Note: deploy the app first if podinfo-dev is empty (scripts/deploy.sh).
+  Next: scripts/deploy.sh (applies podinfo and its HTTPRoute)
 EOF

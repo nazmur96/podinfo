@@ -22,6 +22,12 @@ if ! kind get clusters 2>/dev/null | grep -qx podinfo; then
 	exit 1
 fi
 
+# The overlay includes podinfo's HTTPRoute, which needs the Gateway API CRDs.
+if ! kubectl get crd httproutes.gateway.networking.k8s.io >/dev/null 2>&1; then
+	echo "Gateway API not installed — run scripts/install-local-platform.sh first" >&2
+	exit 1
+fi
+
 echo "building $IMAGE (REVISION=$SHA)"
 docker build -t "$IMAGE" --build-arg "REVISION=$SHA" .
 

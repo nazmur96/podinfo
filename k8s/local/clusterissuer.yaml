@@ -34,6 +34,10 @@ spec:
   privateKey:
     algorithm: ECDSA
     size: 256
+    # Keep the CA key across renewals: .certs/ca.crt is exported once and
+    # trusted per command (CURL_CA_BUNDLE); a rotated CA key would silently
+    # invalidate it. (cert-manager >= 1.18 defaults to Always.)
+    rotationPolicy: Never
   issuerRef:
     name: selfsigned
     kind: ClusterIssuer
