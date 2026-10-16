@@ -109,8 +109,10 @@ func TestTokenValidateHandler(t *testing.T) {
 		rr := httptest.NewRecorder()
 		http.HandlerFunc(srv.tokenValidateHandler).ServeHTTP(rr, req)
 
-		if rr.Code != http.StatusOK {
-			t.Fatalf("got status %d", rr.Code)
+		// Fork patch (P2-8): upstream asserted 200 here, because ErrorResponse
+		// always wrote 200 with the real code only in the JSON body.
+		if rr.Code != http.StatusUnauthorized {
+			t.Fatalf("got status %d, want %d", rr.Code, http.StatusUnauthorized)
 		}
 	})
 
@@ -127,4 +129,28 @@ func TestTokenValidateHandler(t *testing.T) {
 			t.Errorf("expected signature error, got: %s", rr.Body.String())
 		}
 	})
+}
+
+// ErrorResponse must send its code as the HTTP status, not 200 with the code
+// hidden in the body (fork patch, P2-8; CUJ step 7 depends on it).
+func TestTokenValidateWrongSecretIs401(t *testing.T) {
+	issuer := NewMockServer()
+	issuer.config.JWTSecret = "issuer-secret"
+	rr := httptest.NewRecorder()
+	http.HandlerFunc(issuer.tokenGenerateHandler).ServeHTTP(rr, httptest.NewRequest("POST", "/token", strings.NewReader("cuj")))
+	var tok TokenResponse
+	if err := json.Unmarshal(rr.Body.Bytes(), &tok); err != nil {
+		t.Fatal(err)
+	}
+
+	validator := NewMockServer()
+	validator.config.JWTSecret = "a-different-secret"
+	req := httptest.NewRequest("GET", "/token/validate", nil)
+	req.Header.Set("Authorization", "Bearer "+tok.Token)
+	rr = httptest.NewRecorder()
+	http.HandlerFunc(validator.tokenValidateHandler).ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusUnauthorized {
+		t.Errorf("token signed with another secret: HTTP %d, want %d", rr.Code, http.StatusUnauthorized)
+	}
 }

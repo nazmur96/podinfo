@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 # Our image (P2-1): replaces upstream alpine+curl+netcat+podcli+named USER.
-# Digests pinned; bump deliberately. Go < 30 MB budget (P2-5).
+# Digests pinned; bump deliberately. Size budget 30 MiB unpacked (P2-5, scripts/check-image-size.sh).
 
 FROM golang:1.27-bookworm@sha256:5cf287a799e6b94384bad13d16b14904c531f51ba65792237e122ce42b392f61 AS build
 WORKDIR /src

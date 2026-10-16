@@ -1,0 +1,38 @@
+# P2-7: run podinfo locally the way Kubernetes will run it (P3/P6):
+# read-only root, every Linux capability dropped, no privilege escalation,
+# and the JWT secret mounted as a file (ADR-0006).
+#
+#   scripts/make-local-secret.sh                       # once: .secrets/config.yaml
+#   REVISION=$(git rev-parse HEAD) docker compose up --build -d
+#   EXPECT_SHA=$(git rev-parse HEAD) mise exec -- scripts/cuj.sh    # P2-8
+#
+# One service, so there's no network segmentation to prove here: that lesson
+# comes with Retail Store. Keep the image's own arguments (CMD): only env
+# vars are added, so this runs the image exactly as it ships.
+name: podinfo
+
+services:
+  podinfo:
+    build:
+      context: .
+      args:
+        REVISION: ${REVISION:-unknown}
+    image: podinfo:local
+    ports:
+      - "127.0.0.1:9898:9898"
+    environment:
+      PODINFO_CONFIG_PATH: /config # reads /config/config.yaml (jwt-secret)
+    secrets:
+      - source: podinfo_config
+        target: /config/config.yaml
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    stop_grace_period: 10s
+    # No healthcheck: the image has no shell or curl to run one. Kubernetes
+    # probes /healthz and /readyz from outside (P3); scripts/cuj.sh waits on
+    # /readyz before it starts.
+
+secrets:
+  podinfo_config:
+    file: ./.secrets/config.yaml

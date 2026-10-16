@@ -90,7 +90,9 @@ func (s *Server) ErrorResponse(w http.ResponseWriter, r *http.Request, span trac
 
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
-	w.WriteHeader(http.StatusOK)
+	// Fork patch (P2-8): upstream always wrote 200 here, so every error reached
+	// clients, load balancers and metrics as a success.
+	w.WriteHeader(code)
 	w.Write(prettyJSON(body))
 }
 

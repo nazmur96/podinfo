@@ -138,6 +138,12 @@ mise exec -- go run ./cmd/podinfo --port=9898 --enable-unsafe-endpoints
 Deployed environments must leave this flag off. Fault drills use startup
 flags (`--random-error`, etc.) via gitops, not runtime HTTP toggles.
 
+### Fork patch: errors carry their HTTP status (P2-8)
+
+Upstream's `ErrorResponse` always wrote HTTP **200** and put the real code
+only in the JSON body, so a bad token "succeeded" with 200. Ours sends the
+code as the status (400, 401, 413, 500). Successful responses are unchanged.
+
 ### Container image (P2-1)
 
 Our `Dockerfile` (not upstream's): multi-stage →
@@ -166,6 +172,30 @@ Against `podinfo:local` built from this tree:
 | Read-only root | `--read-only --cap-drop ALL --security-opt no-new-privileges`, no writable mounts: CUJ 1–6 and the web UI work. `/store` (flag on) needs a writable `/data` (the image passes `--data-path=/data`; `tmpfs`/`emptyDir` there); without it the write fails with 500. Nothing needs `/tmp` |
 
 P6: `readOnlyRootFilesystem: true` plus an `emptyDir` on `/data` only if `/store` is ever enabled; no `/tmp` volume required for v1.
+
+### Compose, size budget and the CUJ (P2-5, P2-7, P2-8)
+
+`compose.yaml` runs the image the way Kubernetes will: read-only root, all
+capabilities dropped, `no-new-privileges`, and the JWT secret mounted as
+`/config/config.yaml` (ADR-0006). Tools come from `mise.toml`.
+
+```bash
+scripts/make-local-secret.sh                          # once: .secrets/config.yaml (git- and docker-ignored)
+REVISION=$(git rev-parse HEAD) docker compose up --build -d
+EXPECT_SHA=$(git rev-parse HEAD) mise exec -- scripts/cuj.sh
+mise exec -- scripts/check-image-size.sh podinfo:local 30
+docker compose down
+```
+
+- `scripts/cuj.sh` runs the 8 CUJ steps (platform `docs/cuj.md`) and exits
+  non-zero if any fails. Read the `FAIL` lines: each says what it got and
+  what it wanted. `BASE=` points it elsewhere (kind, EKS); `STEP7=skip` only
+  where the real secret isn't wired (a bare `make run`).
+- `scripts/check-image-size.sh <image> <MiB>` compares **bytes** of the
+  unpacked image (`docker image inspect .Size`), so 30.9 MiB fails a 30 MiB
+  budget. Budget for this Go image: **30 MiB**. Blocking in CI from P7.
+- No Compose healthcheck: the image has no shell or `curl` to run one.
+  `cuj.sh` waits for `/readyz`; Kubernetes probes from outside (P3).
 
 ### Guides
 
