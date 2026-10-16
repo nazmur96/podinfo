@@ -29,3 +29,6 @@ cue/go.sum
 
 # P2-7 local secrets (scripts/make-local-secret.sh)
 .secrets/
+
+# P3-1: per-repo kubeconfig (mise KUBECONFIG); never commit cluster credentials
+.kube/

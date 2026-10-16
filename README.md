@@ -197,6 +197,22 @@ docker compose down
 - No Compose healthcheck: the image has no shell or `curl` to run one.
   `cuj.sh` waits for `/readyz`; Kubernetes probes from outside (P3).
 
+### Local kind cluster (P3-1)
+
+Runs on the **host's Docker** with tools from this repo's `mise.toml`
+(ADR-0011). The kubeconfig is `.kube/config` in the repo (git-ignored), not
+`~/.kube/config`. Node image and kubectl minor match EKS (ADR-0010).
+
+```bash
+mise install
+mise exec -- scripts/cluster-up.sh     # 3 control planes + 3 workers, ns podinfo-dev (PSA restricted)
+mise exec -- kubectl get nodes
+mise exec -- scripts/cluster-down.sh
+```
+
+Host ports 80/443 map to NodePorts 30080/30443 on the first control-plane
+node (Gateway wires those in P3-6). Do not `devpod up` from a git worktree.
+
 ### Guides
 
 * [Getting started with Timoni](https://timoni.sh/quickstart/)

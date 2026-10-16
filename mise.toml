@@ -12,8 +12,13 @@ dockle = "0.4.15" # P2-4 CIS-style image checks
 grpcurl = "1.9.4" # P2-4 gRPC listener probes
 jq = "1.8.2" # scripts/cuj.sh
 shellcheck = "0.11.0" # scripts/*.sh
+kind = "0.33.0" # P3-1; same pins as platform/mise.toml (ADR-0010)
+kubectl = "1.36.5" # same minor as kind node image and EKS: ADR-0010
+helm = "4.3.0" # third-party controllers in P3-6+ (D8); pin now with the cluster tools
 "pipx:pre-commit" = "4.7.0"
 
 [env]
 # App itself does not need AWS. Kept empty on purpose so a leaked shell
 # profile does not get a surprise cloud identity while hacking on Go.
+# Per-repo kubeconfig so kubectl here never touches ~/.kube/config (P3-1).
+KUBECONFIG = "{{config_root}}/.kube/config"
