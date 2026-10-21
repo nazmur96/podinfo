@@ -1,0 +1,48 @@
+# P3-7: deny everything in podinfo-dev, then allow only what the dependency
+# map (platform docs/inventory.md) needs. podinfo v1 makes no outbound calls,
+# so the only egress is DNS. Who may call podinfo depends on the front door
+# (Envoy Gateway locally, the ALB on EKS), so that allow lives in the overlay.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny
+  namespace: podinfo-dev
+  labels:
+    app.kubernetes.io/name: podinfo
+    app.kubernetes.io/instance: podinfo-dev
+    app.kubernetes.io/component: network-policy
+    app.kubernetes.io/part-of: podinfo
+    app.kubernetes.io/managed-by: kubectl
+    team: nazmur96
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+# Every pod may resolve names. Selects the CoreDNS pods, not the Service IP:
+# policies match pods after kube-proxy has rewritten the Service address.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns
+  namespace: podinfo-dev
+  labels:
+    app.kubernetes.io/name: podinfo
+    app.kubernetes.io/instance: podinfo-dev
+    app.kubernetes.io/component: network-policy
+    app.kubernetes.io/part-of: podinfo
+    app.kubernetes.io/managed-by: kubectl
+    team: nazmur96
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - { protocol: UDP, port: 53 }
+        - { protocol: TCP, port: 53 }

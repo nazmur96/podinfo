@@ -5,6 +5,8 @@ resources:
   # podinfo's route belongs with the app (its hostname and paths are podinfo's).
   # Needs the Gateway API CRDs: run scripts/install-local-platform.sh first.
   - httproute.yaml
+  # P3-7: who may call podinfo depends on the front door, so the allow is local.
+  - networkpolicy-gateway.yaml
 images:
   # scripts/deploy.sh rewrites newTag to the full git SHA in a temp copy.
   - name: podinfo
