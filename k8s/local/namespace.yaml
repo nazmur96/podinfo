@@ -48,3 +48,16 @@ metadata:
     pod-security.kubernetes.io/enforce: restricted
     pod-security.kubernetes.io/warn: restricted
     pod-security.kubernetes.io/audit: restricted
+---
+# `default` ships with no PSA labels, so it admits privileged pods without a
+# word: P3-9 found mirrord's privileged agent landing there. Nothing of ours
+# runs in it; restricted makes a mistake fail loudly. (kube-system and kind's
+# local-path-storage stay as kind ships them: they are the cluster's own.)
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: default
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/audit: restricted
