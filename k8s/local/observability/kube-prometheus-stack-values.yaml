@@ -1,0 +1,99 @@
+# P3-10 kube-prometheus-stack, demo-grade: one Prometheus, one Alertmanager,
+# Grafana without persistence, 24 h retention. Production-grade self-hosting
+# is P10-13; on EKS P10 uses the AWS-managed services instead.
+
+# Off on kind: node-exporter needs host namespaces (PSA restricted rejects it);
+# etcd, scheduler, controller-manager and kube-proxy listen on localhost in
+# kind, so their targets would only be "down" alerts.
+nodeExporter: { enabled: false }
+kubeEtcd: { enabled: false }
+kubeControllerManager: { enabled: false }
+kubeScheduler: { enabled: false }
+kubeProxy: { enabled: false }
+defaultRules:
+  rules:
+    etcd: false
+    kubeControllerManager: false
+    kubeProxy: false
+    kubeSchedulerAlerting: false
+    kubeSchedulerRecording: false
+    nodeExporterAlerting: false
+    nodeExporterRecording: false
+    node: false
+    windows: false
+
+prometheus:
+  prometheusSpec:
+    replicas: 1
+    retention: 24h
+    retentionSize: 2GB
+    # Pick up ServiceMonitors and rules from every namespace, not only the
+    # ones carrying this Helm release's label: podinfo's live in podinfo-dev.
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    resources:
+      requests: { cpu: 100m, memory: 400Mi }
+      limits: { memory: 1536Mi }
+
+alertmanager:
+  alertmanagerSpec:
+    replicas: 1
+    retention: 24h
+  config:
+    route:
+      receiver: local-webhook
+      group_by: [alertname]
+      group_wait: 10s
+      group_interval: 1m
+      repeat_interval: 1h
+      routes:
+        - receiver: "null"
+          matchers: ['alertname = "Watchdog"']
+    receivers:
+      - name: "null"
+      # A local stand-in for a pager: alert-sink.yaml logs every delivery.
+      - name: local-webhook
+        webhook_configs:
+          - url: http://alert-sink.observability.svc.cluster.local/echo
+            send_resolved: true
+
+grafana:
+  # Admin password from a Secret the install script generates (never the
+  # chart's well-known default).
+  admin:
+    existingSecret: grafana-admin
+    userKey: admin-user
+    passwordKey: admin-password
+  persistence: { enabled: false }
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      searchNamespace: ALL # podinfo's RED dashboard lives with the app
+  additionalDataSources:
+    - name: Loki
+      uid: loki
+      type: loki
+      url: http://loki.observability.svc.cluster.local:3100
+      jsonData:
+        # podinfo writes trace_id only in its debug-level request log
+        # (pkg/api/http/logging.go), so this link works only at --level=debug.
+        derivedFields:
+          - name: trace_id
+            matcherRegex: '"trace_id":"(\w+)"'
+            datasourceUid: tempo
+            url: "$${__value.raw}"
+    - name: Tempo
+      uid: tempo
+      type: tempo
+      url: http://tempo.observability.svc.cluster.local:3200
+      jsonData:
+        tracesToLogsV2:
+          datasourceUid: loki
+          spanStartTimeShift: "-5m"
+          spanEndTimeShift: "5m"
+          filterByTraceID: true
+          customQuery: false
+        serviceMap:
+          datasourceUid: prometheus

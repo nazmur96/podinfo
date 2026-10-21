@@ -1,0 +1,75 @@
+# P3-10: where Alertmanager "pages". Upstream podinfo (pinned digest) at
+# debug level logs one line per request, so each delivered alert shows up as
+# `request started … "uri":"/echo" … "user-agent":"Alertmanager/…"`:
+#   kubectl -n observability logs deploy/alert-sink | grep Alertmanager
+# Debug skips podinfo's drain sleep (questions.md #4); fine for a sink.
+apiVersion: v1
+kind: Service
+metadata:
+  name: alert-sink
+  namespace: observability
+  labels:
+    app.kubernetes.io/name: alert-sink
+    app.kubernetes.io/instance: podinfo-local
+    app.kubernetes.io/component: observability
+    app.kubernetes.io/part-of: podinfo
+    app.kubernetes.io/managed-by: kubectl
+    team: nazmur96
+spec:
+  selector:
+    app.kubernetes.io/name: alert-sink
+    app.kubernetes.io/instance: podinfo-local
+  ports:
+    - { name: http, port: 80, targetPort: http }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alert-sink
+  namespace: observability
+  labels:
+    app.kubernetes.io/name: alert-sink
+    app.kubernetes.io/instance: podinfo-local
+    app.kubernetes.io/component: observability
+    app.kubernetes.io/part-of: podinfo
+    app.kubernetes.io/managed-by: kubectl
+    team: nazmur96
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: alert-sink
+      app.kubernetes.io/instance: podinfo-local
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: alert-sink
+        app.kubernetes.io/instance: podinfo-local
+        app.kubernetes.io/component: observability
+        app.kubernetes.io/part-of: podinfo
+        app.kubernetes.io/managed-by: kubectl
+        team: nazmur96
+    spec:
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 100 # the image's `app` user, numeric for runAsNonRoot
+        runAsGroup: 101
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: sink
+          image: ghcr.io/stefanprodan/podinfo:6.9.2@sha256:cab90e04829cdae73199a8402882a4e3ccaf251b8a0d50bdefede0ab3f6371e7
+          env:
+            - { name: PODINFO_LEVEL, value: debug }
+          ports:
+            - { name: http, containerPort: 9898 }
+          readinessProbe:
+            httpGet: { path: /readyz, port: http }
+          resources:
+            requests: { cpu: 10m, memory: 32Mi }
+            limits: { memory: 64Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: ["ALL"] }

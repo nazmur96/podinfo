@@ -1,0 +1,33 @@
+# P3-10 Tempo, single binary, demo-grade: 1 replica, local disk (emptyDir,
+# lost with the pod), 24 h retention. Production-grade tracing is P10.
+# Chart: grafana-community/tempo (grafana/tempo is deprecated and moved).
+replicas: 1
+tempo:
+  retention: 24h
+  # OTLP only: podinfo exports OTLP/gRPC through Alloy.
+  receivers:
+    otlp:
+      protocols:
+        grpc: { endpoint: "0.0.0.0:4317" }
+        http: { endpoint: "0.0.0.0:4318" }
+  resources:
+    requests: { cpu: 50m, memory: 128Mi }
+    limits: { memory: 512Mi }
+  # With persistence off the chart mounts nothing at /var/tempo; with a
+  # read-only root filesystem Tempo then fails "mkdir /var/tempo/traces".
+  extraVolumeMounts:
+    - { name: data, mountPath: /var/tempo }
+  securityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities: { drop: ["ALL"] }
+securityContext:
+  runAsUser: 10001
+  runAsGroup: 10001
+  fsGroup: 10001
+  runAsNonRoot: true
+  seccompProfile: { type: RuntimeDefault }
+persistence:
+  enabled: false
+extraVolumes:
+  - { name: data, emptyDir: {} }

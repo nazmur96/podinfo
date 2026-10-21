@@ -1,0 +1,18 @@
+# P3-10: the demo-grade observability stack. PSA restricted like every other
+# namespace of ours: node-exporter is off because it needs the host's PID and
+# network namespaces, and Alloy reads pod logs through the Kubernetes API, not
+# a hostPath mount of /var/log.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: observability
+  labels:
+    app.kubernetes.io/name: observability
+    app.kubernetes.io/instance: podinfo-local
+    app.kubernetes.io/component: observability
+    app.kubernetes.io/part-of: podinfo
+    app.kubernetes.io/managed-by: kubectl
+    team: nazmur96
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/audit: restricted

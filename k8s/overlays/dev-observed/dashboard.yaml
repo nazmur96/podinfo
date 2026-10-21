@@ -1,0 +1,22 @@
+# P3-10 RED dashboard (Rate, Errors, Duration) for podinfo. Grafana's sidecar
+# loads every ConfigMap labelled grafana_dashboard=1, in any namespace.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: podinfo-red-dashboard
+  namespace: podinfo-dev
+  labels:
+    app.kubernetes.io/name: podinfo
+    app.kubernetes.io/instance: podinfo-dev
+    app.kubernetes.io/component: observability
+    app.kubernetes.io/part-of: podinfo
+    app.kubernetes.io/managed-by: kubectl
+    team: nazmur96
+    grafana_dashboard: "1"
+data:
+  podinfo-red.json: |
+    {"uid":"podinfo-red","title":"podinfo RED","schemaVersion":39,"time":{"from":"now-1h","to":"now"},"refresh":"30s",
+     "panels":[{"id":1,"type":"timeseries","title":"Rate: requests/s by path","datasource":{"type":"prometheus","uid":"prometheus"},"gridPos":{"h":8,"w":12,"x":0,"y":0},"fieldConfig":{"defaults":{"unit":"reqps"}},"targets":[{"refId":"A","expr":"sum by (path) (rate(http_request_duration_seconds_count{namespace=\"podinfo-dev\"}[1m]))","legendFormat":"{{path}}"}]},
+       {"id":2,"type":"timeseries","title":"Errors: 5xx share of user requests (SLI)","datasource":{"type":"prometheus","uid":"prometheus"},"gridPos":{"h":8,"w":12,"x":12,"y":0},"fieldConfig":{"defaults":{"unit":"percentunit"}},"targets":[{"refId":"A","expr":"podinfo:sli_error_ratio:rate5m","legendFormat":"error ratio 5m"}]},
+       {"id":3,"type":"timeseries","title":"Duration: p95 latency by path","datasource":{"type":"prometheus","uid":"prometheus"},"gridPos":{"h":8,"w":12,"x":0,"y":8},"fieldConfig":{"defaults":{"unit":"s"}},"targets":[{"refId":"A","expr":"podinfo:latency_seconds:p95_rate5m","legendFormat":"{{path}}"}]},
+       {"id":4,"type":"timeseries","title":"Error budget burn rate (1 h)","datasource":{"type":"prometheus","uid":"prometheus"},"gridPos":{"h":8,"w":12,"x":12,"y":8},"fieldConfig":{"defaults":{"unit":"none"}},"targets":[{"refId":"A","expr":"podinfo:sli_error_ratio:rate1h / 0.005","legendFormat":"burn rate 1h"}]}]}

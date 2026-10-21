@@ -1,0 +1,21 @@
+# Env only, never args: (the P2-4 /data trap). A strategic merge on the
+# container's env/ports lists merges by name, so dev's env stays.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: podinfo
+  namespace: podinfo-dev
+spec:
+  template:
+    spec:
+      containers:
+        - name: podinfo
+          ports:
+            # Separate metrics listener: /metrics only (P2-1a: no pprof here).
+            - { name: metrics, containerPort: 9797, protocol: TCP }
+          env:
+            - { name: PODINFO_PORT_METRICS, value: "9797" }
+            # Setting the service name turns on trace AND log export (OTLP).
+            - { name: PODINFO_OTEL_SERVICE_NAME, value: podinfo }
+            - { name: OTEL_EXPORTER_OTLP_ENDPOINT, value: "http://alloy.observability.svc.cluster.local:4317" }
+            - { name: OTEL_EXPORTER_OTLP_INSECURE, value: "true" }

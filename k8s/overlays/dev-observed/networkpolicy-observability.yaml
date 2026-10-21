@@ -1,0 +1,61 @@
+# P3-10 holes in default-deny, each for one call:
+#   Prometheus → podinfo:9797 (scrape). Not 9898: the app port stays Gateway-only.
+#   podinfo → Alloy:4317 (OTLP traces + logs). Logs from stderr need no hole:
+#   Alloy reads them through the API server.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-prometheus-scrape
+  namespace: podinfo-dev
+  labels:
+    app.kubernetes.io/name: podinfo
+    app.kubernetes.io/instance: podinfo-dev
+    app.kubernetes.io/component: observability
+    app.kubernetes.io/part-of: podinfo
+    app.kubernetes.io/managed-by: kubectl
+    team: nazmur96
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: podinfo
+      app.kubernetes.io/instance: podinfo-dev
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: observability
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: prometheus
+      ports:
+        - { protocol: TCP, port: metrics }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-otlp-to-alloy
+  namespace: podinfo-dev
+  labels:
+    app.kubernetes.io/name: podinfo
+    app.kubernetes.io/instance: podinfo-dev
+    app.kubernetes.io/component: observability
+    app.kubernetes.io/part-of: podinfo
+    app.kubernetes.io/managed-by: kubectl
+    team: nazmur96
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: podinfo
+      app.kubernetes.io/instance: podinfo-dev
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: observability
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: alloy
+      ports:
+        - { protocol: TCP, port: 4317 }

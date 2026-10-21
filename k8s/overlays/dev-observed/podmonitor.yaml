@@ -1,0 +1,23 @@
+# PodMonitor, not ServiceMonitor: it scrapes the pods' named metrics port, so
+# the Service keeps exposing only the app port.
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: podinfo
+  namespace: podinfo-dev
+  labels:
+    app.kubernetes.io/name: podinfo
+    app.kubernetes.io/instance: podinfo-dev
+    app.kubernetes.io/component: observability
+    app.kubernetes.io/part-of: podinfo
+    app.kubernetes.io/managed-by: kubectl
+    team: nazmur96
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: podinfo
+      app.kubernetes.io/instance: podinfo-dev
+  podMetricsEndpoints:
+    - port: metrics
+      path: /metrics
+      interval: 15s

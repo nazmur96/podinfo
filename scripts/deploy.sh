@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # P3-2/P3-3: build the image, load it into kind, create the JWT Secret from
 # .secrets/, apply k8s/overlays/dev. Namespace lives in k8s/base (not kind/).
-# Usage: mise exec -- scripts/deploy.sh
+# Usage: [OVERLAY=dev|dev-observed] mise exec -- scripts/deploy.sh
+#   dev-observed (P3-10) adds metrics, OTLP, SLO rules; needs install-observability.sh
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -11,6 +12,8 @@ export KUBECONFIG="${KUBECONFIG:-$ROOT/.kube/config}"
 SHA=$(git rev-parse HEAD)
 IMAGE=podinfo:${SHA}
 SECRET_FILE=$ROOT/.secrets/config.yaml
+OVERLAY=${OVERLAY:-dev}
+[ -d "k8s/overlays/$OVERLAY" ] || { echo "no overlay k8s/overlays/$OVERLAY" >&2; exit 1; }
 
 if [ ! -f "$SECRET_FILE" ]; then
 	echo "missing $SECRET_FILE — run scripts/make-local-secret.sh first" >&2
@@ -58,9 +61,9 @@ cp -a k8s "$tmp/k8s"
 # Rewrite the image tag in the temp overlay only — never dirty the worktree.
 sed -i "s|^[[:space:]]*newTag:.*|    newTag: ${SHA}|" "$tmp/k8s/overlays/dev/kustomization.yaml"
 
-echo "applying kustomize overlay (image=$IMAGE)"
+echo "applying kustomize overlay $OVERLAY (image=$IMAGE)"
 # Capture apply output so PSA warnings are visible in CI logs / reviews.
-apply_out=$(kubectl apply -k "$tmp/k8s/overlays/dev" 2>&1)
+apply_out=$(kubectl apply -k "$tmp/k8s/overlays/$OVERLAY" 2>&1)
 printf '%s\n' "$apply_out"
 if printf '%s\n' "$apply_out" | grep -qi 'warning.*violates\|warning.*podsecurity\|would violate PodSecurity'; then
 	echo "ERROR: kubectl apply produced a PSA warning" >&2
