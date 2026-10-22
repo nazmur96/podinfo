@@ -1,0 +1,25 @@
+# P3-9 (ADR-0012), used by scripts/mirrord.sh. The agent is privileged, so it
+# runs in the `mirrord` namespace (the one PSA exception, local only), never
+# in podinfo-dev or default.
+target:
+  path: deployment/podinfo
+  namespace: podinfo-dev
+agent:
+  namespace: mirrord
+  ttl: 30
+telemetry: false
+feature:
+  network:
+    # steal: the targeted pod's share of Gateway traffic is answered by the
+    # local process (mirror would only copy it).
+    incoming: { mode: steal }
+    outgoing: true
+    dns: true
+  # read: every file read goes to the pod, so /config/config.yaml (the JWT
+  # Secret) is the pod's. `mode: local` + `read_only: ["^/config/"]` did NOT
+  # work: podinfo's os.Stat of the file stayed local, so it ran with the
+  # default secret (tokens from the pod got 401 locally). The /config file
+  # watcher still fails ("config watch error"): Secret rotation isn't seen.
+  fs:
+    mode: read
+  env: true
