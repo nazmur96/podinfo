@@ -1,0 +1,36 @@
+# P3-7: only the local Gateway's Envoy pods may call podinfo, and only on its
+# HTTP port. Envoy sends to pod IPs on 9898 (the Service's targetPort), not
+# to the Service's port 80. The Envoy pods run in envoy-gateway-system, not
+# in the Gateway's namespace (gateway). Both selectors are in ONE `from`
+# entry: that means "these pods in that namespace". As two entries they
+# would mean "any pod in that namespace, or these pods in podinfo-dev".
+# On EKS the ALB (P9) replaces this allow.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-from-gateway
+  namespace: podinfo-dev
+  labels:
+    app.kubernetes.io/name: podinfo
+    app.kubernetes.io/instance: podinfo-dev
+    app.kubernetes.io/component: network-policy
+    app.kubernetes.io/part-of: podinfo
+    app.kubernetes.io/managed-by: kubectl
+    team: nazmur96
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: podinfo
+      app.kubernetes.io/instance: podinfo-dev
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: envoy-gateway-system
+          podSelector:
+            matchLabels:
+              gateway.envoyproxy.io/owning-gateway-name: public
+              gateway.envoyproxy.io/owning-gateway-namespace: gateway
+      ports:
+        - { protocol: TCP, port: http }

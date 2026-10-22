@@ -6,5 +6,6 @@ resources:
   - serviceaccount.yaml
   - deployment.yaml
   - service.yaml
+  - networkpolicy.yaml # P3-7: default-deny + DNS
 # Labels are written on each object. Do not use commonLabels / labels with
 # includeSelectors: selectors must stay name+instance only (immutable).
