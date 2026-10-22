@@ -1,0 +1,67 @@
+# P3-10 first SLO: availability of the user paths of the CUJ (inventory.md).
+# SLI = share of requests to /, /version, /token, /token/validate that are
+# not 5xx. Probes (/healthz, /readyz) are excluded: the kubelet's own calls
+# would pad the "good" count. Objective 99.5 % (error budget 0.5 %).
+# Burn-rate alerts after the SRE workbook's multi-window pattern: page when
+# the budget burns 14.4× too fast over both 1 h and 5 m. The same rules go
+# to Amazon Managed Prometheus in P10-4.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: podinfo-slo
+  namespace: podinfo-dev
+  labels:
+    app.kubernetes.io/name: podinfo
+    app.kubernetes.io/instance: podinfo-dev
+    app.kubernetes.io/component: observability
+    app.kubernetes.io/part-of: podinfo
+    app.kubernetes.io/managed-by: kubectl
+    team: nazmur96
+spec:
+  groups:
+    - name: podinfo-slo.recording
+      rules:
+        - record: podinfo:sli_error_ratio:rate5m
+          expr: |
+            sum(rate(http_request_duration_seconds_count{namespace="podinfo-dev",path=~"root|version|token|token_validate",status=~"5.."}[5m]))
+            /
+            sum(rate(http_request_duration_seconds_count{namespace="podinfo-dev",path=~"root|version|token|token_validate"}[5m]))
+        - record: podinfo:sli_error_ratio:rate30m
+          expr: |
+            sum(rate(http_request_duration_seconds_count{namespace="podinfo-dev",path=~"root|version|token|token_validate",status=~"5.."}[30m]))
+            /
+            sum(rate(http_request_duration_seconds_count{namespace="podinfo-dev",path=~"root|version|token|token_validate"}[30m]))
+        - record: podinfo:sli_error_ratio:rate1h
+          expr: |
+            sum(rate(http_request_duration_seconds_count{namespace="podinfo-dev",path=~"root|version|token|token_validate",status=~"5.."}[1h]))
+            /
+            sum(rate(http_request_duration_seconds_count{namespace="podinfo-dev",path=~"root|version|token|token_validate"}[1h]))
+        - record: podinfo:sli_error_ratio:rate6h
+          expr: |
+            sum(rate(http_request_duration_seconds_count{namespace="podinfo-dev",path=~"root|version|token|token_validate",status=~"5.."}[6h]))
+            /
+            sum(rate(http_request_duration_seconds_count{namespace="podinfo-dev",path=~"root|version|token|token_validate"}[6h]))
+        - record: podinfo:latency_seconds:p95_rate5m
+          expr: |
+            histogram_quantile(0.95, sum by (le, path) (rate(http_request_duration_seconds_bucket{namespace="podinfo-dev",path=~"root|version|token|token_validate"}[5m])))
+    - name: podinfo-slo.alerts
+      rules:
+        - alert: PodinfoErrorBudgetFastBurn
+          expr: |
+            podinfo:sli_error_ratio:rate1h > (14.4 * 0.005)
+            and
+            podinfo:sli_error_ratio:rate5m > (14.4 * 0.005)
+          for: 1m
+          labels: { severity: page, slo: podinfo-availability }
+          annotations:
+            summary: podinfo is burning its 30-day error budget 14.4× too fast
+            description: "{{ $value | humanizePercentage }} of user requests failed over the last hour (objective 99.5 %)."
+        - alert: PodinfoErrorBudgetSlowBurn
+          expr: |
+            podinfo:sli_error_ratio:rate6h > (6 * 0.005)
+            and
+            podinfo:sli_error_ratio:rate30m > (6 * 0.005)
+          for: 5m
+          labels: { severity: ticket, slo: podinfo-availability }
+          annotations:
+            summary: podinfo is burning its error budget 6× too fast

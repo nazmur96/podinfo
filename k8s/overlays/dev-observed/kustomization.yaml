@@ -1,0 +1,14 @@
+# P3-10: dev + what the observability stack needs from podinfo: a metrics
+# port, OTLP export, a PodMonitor, the SLO rules, a RED dashboard, and the
+# NetworkPolicy holes for exactly those. Needs scripts/install-observability.sh
+# (its CRDs) first. Deploy: OVERLAY=dev-observed scripts/deploy.sh
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../dev
+  - podmonitor.yaml
+  - prometheusrule.yaml
+  - networkpolicy-observability.yaml
+  - dashboard.yaml
+patches:
+  - path: deployment-patch.yaml

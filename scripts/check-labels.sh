@@ -4,7 +4,7 @@
 # renders, plus the Secret scripts/deploy.sh creates, so a new manifest is
 # checked without editing this script. Auto-created objects (the default
 # ServiceAccount, kube-root-ca.crt) aren't rendered, so they're never checked.
-# Usage: mise exec -- scripts/check-labels.sh
+# Usage: [OVERLAY=dev|dev-observed] mise exec -- scripts/check-labels.sh
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -21,12 +21,12 @@ required=(
 )
 
 mapfile -t objects < <(
-	kubectl apply -k k8s/overlays/dev --dry-run=client -o json |
+	kubectl apply -k "k8s/overlays/${OVERLAY:-dev}" --dry-run=client -o json |
 		jq -r '(.items // [.])[] | "\(.kind)/\(.metadata.name)"'
 )
 objects+=("Secret/podinfo-config") # created by scripts/deploy.sh, not kustomize
 if [ "${#objects[@]}" -lt 2 ]; then
-	echo "FAIL could not render k8s/overlays/dev" >&2
+	echo "FAIL could not render k8s/overlays/${OVERLAY:-dev}" >&2
 	exit 1
 fi
 

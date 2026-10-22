@@ -44,6 +44,7 @@ mise exec -- scripts/make-local-secret.sh        # git-ignored JWT secret
 |---|---|---|
 | see a code change in the cluster | `mise exec -- tilt up` | Rebuilds the image on save and rolls it out behind the Gateway: **8-10 s** from save to served (measured). Same Dockerfile, overlay and Secret as `deploy.sh`. `tilt down` removes what it applied but keeps the namespace; run `scripts/deploy.sh` afterwards to get back to the scripted state |
 | debug podinfo on your machine with cluster traffic | `mise exec -- scripts/mirrord.sh` | Builds podinfo and runs it locally as if it were one pod: that pod's env, its `/config` Secret and its share of Gateway traffic (`/version` shows commit `unknown` for those). Pass your own command to run something else (a debugger launch is untested here). Ctrl-C hands the traffic back |
+| watch it (metrics, logs, traces, SLO alerts) | `mise exec -- scripts/install-observability.sh`, then `OVERLAY=dev-observed scripts/deploy.sh` | Demo-grade stack (~1.4 GiB working set), P3-10. Grafana: see the script output for the port-forward and password |
 | deploy the committed state | `mise exec -- scripts/deploy.sh` | Image tagged with the full git SHA |
 | check it works | `CURL_CA_BUNDLE=$PWD/.certs/ca.crt BASE=https://podinfo.localhost EXPECT_SHA=$(git rev-parse HEAD) scripts/cuj.sh` | Plus `scripts/check-netpol.sh`, `scripts/check-labels.sh`, `scripts/rollout-drill.sh restart` |
 
