@@ -17,6 +17,23 @@ spec:
   provider:
     type: Kubernetes
     kubernetes:
+      # P3-8: two Envoy pods on different nodes, and a drain may take only
+      # one at a time. With the default single replica, draining its node
+      # took the front door down: 14-20 timed-out requests per drain while
+      # podinfo itself stayed up.
+      envoyDeployment:
+        replicas: 2
+        pod:
+          topologySpreadConstraints:
+            - maxSkew: 1
+              topologyKey: kubernetes.io/hostname
+              whenUnsatisfiable: DoNotSchedule
+              labelSelector:
+                matchLabels:
+                  gateway.envoyproxy.io/owning-gateway-name: public
+                  gateway.envoyproxy.io/owning-gateway-namespace: gateway
+      envoyPDB:
+        maxUnavailable: 1
       envoyService:
         type: NodePort
         # Cluster (not Local): kind maps host 80/443 only onto the first

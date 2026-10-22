@@ -39,6 +39,7 @@ metadata:
 spec:
   automountServiceAccountToken: false
   restartPolicy: Never
+  terminationGracePeriodSeconds: 0 # busybox sleep ignores SIGTERM
   securityContext:
     runAsNonRoot: true
     runAsUser: 65532
