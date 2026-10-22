@@ -30,8 +30,11 @@ spec:
     spec:
       serviceAccountName: podinfo
       automountServiceAccountToken: false
-      # preStop 5s + podinfo's 3s drain sleep + ~2s in-flight ≤ this (P1-6).
-      # P3-8 tunes the numbers against a live Gateway loop.
+      # Shutdown budget (P3-8, measured through the Gateway): preStop 5 s +
+      # podinfo's 3 s drain sleep + up to 5 s --server-shutdown-timeout =
+      # 13 s worst case, well inside this. scripts/rollout-drill.sh: preStop
+      # 5 s → 0 non-200 in 8 restarts; no preStop → 4 then 0; no preStop +
+      # --level=debug (skips the 3 s sleep) → 7-8 per restart.
       terminationGracePeriodSeconds: 30
       securityContext:
         runAsNonRoot: true
@@ -90,6 +93,8 @@ spec:
           lifecycle:
             preStop:
               # Native sleep (K8s ≥ 1.30): distroless has no shell for `sleep`.
+              # Gives Envoy time to drop the endpoint before podinfo stops
+              # answering (P3-8). Recheck behind the ALB (questions.md #3).
               sleep:
                 seconds: 5
           securityContext:
